@@ -39,6 +39,8 @@ video_library = {}
 questions = {}
 users = {}
 progress = {}
+chat_messages = {}
+announcements = {}
 
 DATA_FILE = "waloo_data.json"
 
@@ -49,13 +51,17 @@ if os.path.exists(DATA_FILE):
         questions = data.get('questions', {})
         users = data.get('users', {})
         progress = data.get('progress', {})
+        chat_messages = data.get('chat_messages', {})
+        announcements = data.get('announcements', {})
 
 def save_data():
     data = {
         'videos': video_library,
         'questions': questions,
         'users': users,
-        'progress': progress
+        'progress': progress,
+        'chat_messages': chat_messages,
+        'announcements': announcements
     }
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
@@ -65,7 +71,6 @@ def save_data():
 # ============================================
 
 def get_lesson_parts(lesson_key):
-    """Get all parts for a lesson"""
     parts = []
     for key in video_library.keys():
         if key == lesson_key or key.startswith(lesson_key + "_"):
@@ -101,6 +106,20 @@ def get_part_number(video_key):
             return int(last_part)
     return 1
 
+def get_badges(watched):
+    badges = []
+    if watched >= 5:
+        badges.append("🌟 Beginner")
+    if watched >= 10:
+        badges.append("📘 Learner")
+    if watched >= 20:
+        badges.append("📚 Scholar")
+    if watched >= 30:
+        badges.append("🎓 Economics Expert")
+    if watched >= 34:
+        badges.append("🏆 Master of Economics")
+    return ", ".join(badges) if badges else "No badges yet"
+
 # ============================================
 # MENU BAR
 # ============================================
@@ -108,9 +127,18 @@ def get_part_number(video_key):
 def get_student_menu():
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📚 View Units"), KeyboardButton(text="📊 My Progress")],
-            [KeyboardButton(text="❓ Ask Question"), KeyboardButton(text="ℹ️ About")],
-            [KeyboardButton(text="🆘 Help"), KeyboardButton(text="🆔 My ID")]
+            [
+                KeyboardButton(text="📚 View Units"),
+                KeyboardButton(text="📊 My Progress")
+            ],
+            [
+                KeyboardButton(text="❓ Ask Question"),
+                KeyboardButton(text="ℹ️ About")
+            ],
+            [
+                KeyboardButton(text="🆘 Help"),
+                KeyboardButton(text="🆔 My ID")
+            ]
         ],
         resize_keyboard=True,
         input_field_placeholder="Tap a button..."
@@ -120,10 +148,21 @@ def get_student_menu():
 def get_admin_menu():
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📹 Upload Video"), KeyboardButton(text="📄 Send Material")],
-            [KeyboardButton(text="📢 Send Text"), KeyboardButton(text="❓ View Questions")],
-            [KeyboardButton(text="📊 Dashboard"), KeyboardButton(text="🗑️ Delete Content")],
-            [KeyboardButton(text="🔙 Student View")]
+            [
+                KeyboardButton(text="📹 Upload Video"),
+                KeyboardButton(text="❓ View Questions")
+            ],
+            [
+                KeyboardButton(text="📢 Send Text"),
+                KeyboardButton(text="📊 Dashboard")
+            ],
+            [
+                KeyboardButton(text="🗑️ Delete Content"),
+                KeyboardButton(text="🗑️ Delete Announcement")
+            ],
+            [
+                KeyboardButton(text="🔙 Student View")
+            ]
         ],
         resize_keyboard=True,
         input_field_placeholder="Admin: Tap a button..."
@@ -179,7 +218,6 @@ def get_parts_keyboard(lesson_key, unit_id):
     return builder.as_markup()
 
 def get_video_player_keyboard(video_key, lesson_key, unit_id):
-    """Keyboard for video player with navigation - returns builder NOT markup"""
     builder = InlineKeyboardBuilder()
     
     prev_part = get_previous_part(lesson_key, video_key)
@@ -193,8 +231,6 @@ def get_video_player_keyboard(video_key, lesson_key, unit_id):
     builder.row(InlineKeyboardButton(text="📚 All Parts", callback_data=f"view_parts_{lesson_key}"))
     builder.row(InlineKeyboardButton(text="🔙 Back to Lessons", callback_data=f"open_unit_{unit_id}"))
     builder.row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="main_menu"))
-    
-    # Return the builder (not as_markup)
     return builder
 
 # ============================================
@@ -289,24 +325,6 @@ UNITS = {
 TOTAL_LESSONS = sum(len(unit["lessons"]) for unit in UNITS.values())
 
 # ============================================
-# HELPER FUNCTIONS
-# ============================================
-
-def get_badges(watched):
-    badges = []
-    if watched >= 5:
-        badges.append("🌟 Beginner")
-    if watched >= 10:
-        badges.append("📘 Learner")
-    if watched >= 20:
-        badges.append("📚 Scholar")
-    if watched >= 30:
-        badges.append("🎓 Economics Expert")
-    if watched >= TOTAL_LESSONS:
-        badges.append("🏆 Master of Economics")
-    return ", ".join(badges) if badges else "No badges yet"
-
-# ============================================
 # START COMMAND
 # ============================================
 
@@ -394,31 +412,12 @@ async def menu_admin_upload(message: types.Message):
     await message.answer(
         "📹 **Upload a Video**\n\n"
         "**Format:** `/upload [key] [name]`\n\n"
+        "**For multi-part lessons:**\n"
+        "`/upload unit_1_1.1_1 Part 1`\n"
+        "`/upload unit_1_1.1_2 Part 2`\n\n"
         "**Example:**\n"
         "`/upload unit_1_1.1_1 Definition of Macroeconomics - Part 1`\n"
         "Then attach your video.",
-        parse_mode="Markdown",
-        reply_markup=get_admin_menu()
-    )
-
-@dp.message(lambda msg: msg.text == "📄 Send Material")
-async def menu_admin_material(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("⛔ Access Denied!")
-        return
-    await message.answer(
-        "📄 `/material [name]` then attach file.",
-        parse_mode="Markdown",
-        reply_markup=get_admin_menu()
-    )
-
-@dp.message(lambda msg: msg.text == "📢 Send Text")
-async def menu_admin_text(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("⛔ Access Denied!")
-        return
-    await message.answer(
-        f"📢 `/text [message]`\n\nWill be sent to {len(users)} students.",
         parse_mode="Markdown",
         reply_markup=get_admin_menu()
     )
@@ -429,6 +428,21 @@ async def menu_admin_questions(message: types.Message):
         await message.answer("⛔ Access Denied!")
         return
     await view_questions_command(message)
+
+@dp.message(lambda msg: msg.text == "📢 Send Text")
+async def menu_admin_send_text(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Access Denied!")
+        return
+    await message.answer(
+        "📢 **Send Announcement**\n\n"
+        "Type: `/text [your announcement]`\n\n"
+        "**Example:**\n"
+        "`/text New video uploaded! Check it out!`\n\n"
+        f"📊 Will be sent to all {len(users)} students.",
+        parse_mode="Markdown",
+        reply_markup=get_admin_menu()
+    )
 
 @dp.message(lambda msg: msg.text == "📊 Dashboard")
 async def menu_admin_dashboard(message: types.Message):
@@ -443,6 +457,21 @@ async def menu_admin_delete(message: types.Message):
         await message.answer("⛔ Access Denied!")
         return
     await delete_content_command(message)
+
+@dp.message(lambda msg: msg.text == "🗑️ Delete Announcement")
+async def menu_admin_delete_announcement(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Access Denied!")
+        return
+    await message.answer(
+        "🗑️ **Delete Announcement**\n\n"
+        "Type: `/delete_announcement [announcement text]`\n\n"
+        "**Example:**\n"
+        "`/delete_announcement New video uploaded!`\n\n"
+        "Or type `/list_announcements` to see all announcements.",
+        parse_mode="Markdown",
+        reply_markup=get_admin_menu()
+    )
 
 @dp.message(lambda msg: msg.text == "🔙 Student View")
 async def menu_student_view(message: types.Message):
@@ -514,7 +543,6 @@ async def open_unit_callback(callback: types.CallbackQuery):
 async def view_parts_callback(callback: types.CallbackQuery):
     lesson_key = callback.data.replace("view_parts_", "")
     
-    # Find unit_id
     unit_id = None
     for u_id, unit in UNITS.items():
         for lesson in unit["lessons"]:
@@ -528,7 +556,6 @@ async def view_parts_callback(callback: types.CallbackQuery):
         await callback.answer("❌ Lesson not found!")
         return
     
-    # Find lesson name
     lesson_name = lesson_key
     for u_id, unit in UNITS.items():
         for lesson in unit["lessons"]:
@@ -560,15 +587,12 @@ async def view_parts_callback(callback: types.CallbackQuery):
     )
 
 # ============================================
-# PLAY LESSON - FIXED
+# PLAY LESSON
 # ============================================
 
 @dp.callback_query(lambda c: c.data.startswith("play_"))
 async def play_lesson_callback(callback: types.CallbackQuery):
     video_key = callback.data.replace("play_", "")
-    
-    print(f"🔍 Looking for video: {video_key}")
-    print(f"📹 Available: {list(video_library.keys())}")
     
     if video_key not in video_library:
         await callback.answer("❌ Video not found!")
@@ -579,14 +603,12 @@ async def play_lesson_callback(callback: types.CallbackQuery):
     lesson_name = video_data["name"]
     duration = video_data["duration"]
     
-    # Extract lesson_key (remove part number)
     lesson_key = video_key
     if "_" in video_key:
         parts = video_key.split("_")
         if parts[-1].isdigit():
             lesson_key = "_".join(parts[:-1])
     
-    # Find unit_id
     unit_id = None
     for u_id, unit in UNITS.items():
         for lesson in unit["lessons"]:
@@ -598,7 +620,6 @@ async def play_lesson_callback(callback: types.CallbackQuery):
     
     await callback.answer(f"▶️ Playing: {lesson_name}")
     
-    # Mark as watched
     user_id = str(callback.from_user.id)
     if user_id not in progress:
         progress[user_id] = {}
@@ -609,9 +630,7 @@ async def play_lesson_callback(callback: types.CallbackQuery):
         if user_id in users:
             users[user_id]['total_lessons_watched'] = users[user_id].get('total_lessons_watched', 0) + 1
         save_data()
-        print(f"✅ Progress saved for {user_id} on {video_key}")
     
-    # Get the builder (not as_markup)
     builder = get_video_player_keyboard(video_key, lesson_key, unit_id)
     
     try:
@@ -624,15 +643,13 @@ async def play_lesson_callback(callback: types.CallbackQuery):
             parse_mode="Markdown"
         )
         await callback.message.delete()
-        print(f"✅ Video played: {video_key}")
     except Exception as e:
         await callback.message.answer(
             f"❌ Error: {str(e)}\n\nPlease contact admin."
         )
-        print(f"❌ Error: {e}")
 
 # ============================================
-# MAIN MENU
+# MAIN MENU CALLBACK
 # ============================================
 
 @dp.callback_query(lambda c: c.data == "main_menu")
@@ -653,6 +670,151 @@ async def main_menu_callback(callback: types.CallbackQuery):
         watched = len(user_progress)
         text = f"🎓 **Welcome back!**\n\nProgress: {watched}/{TOTAL_LESSONS} lessons\n{ (watched / TOTAL_LESSONS * 100) if TOTAL_LESSONS > 0 else 0:.1f}% Complete"
         await callback.message.answer(text, reply_markup=get_student_menu(), parse_mode="Markdown")
+
+# ============================================
+# SEND TEXT / ANNOUNCEMENT
+# ============================================
+
+@dp.message(Command("text"))
+async def send_text_command(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Access Denied!")
+        return
+    
+    parts = message.text.split(maxsplit=1)
+    if len(parts) < 2:
+        await message.answer(
+            "📢 `/text [your announcement]`\n\n"
+            "**Example:** `/text New video uploaded!`",
+            parse_mode="Markdown",
+            reply_markup=get_admin_menu()
+        )
+        return
+    
+    text_message = parts[1]
+    
+    # Store announcement
+    ann_id = f"ann_{len(announcements) + 1}"
+    announcements[ann_id] = {
+        "text": text_message,
+        "sent_at": datetime.now().strftime("%Y-%m-%d %H:%M")
+    }
+    save_data()
+    
+    sent = 0
+    failed = 0
+    
+    for user_id in users.keys():
+        try:
+            await bot.send_message(
+                chat_id=int(user_id),
+                text=f"📢 **Announcement from Waloo Academy**\n\n{text_message}",
+                parse_mode="Markdown"
+            )
+            sent += 1
+            await asyncio.sleep(0.05)
+        except Exception as e:
+            failed += 1
+            print(f"❌ Failed to send to {user_id}: {e}")
+    
+    await message.answer(f"""
+✅ **Announcement Sent!**
+
+📢 {text_message[:100]}{'...' if len(text_message) > 100 else ''}
+
+📤 Sent to: {sent} students
+❌ Failed: {failed}
+
+📌 Announcement ID: `{ann_id}`
+    """, parse_mode="Markdown", reply_markup=get_admin_menu())
+
+# ============================================
+# DELETE ANNOUNCEMENT - METHOD 3
+# ============================================
+
+@dp.message(Command("delete_announcement"))
+async def delete_announcement_command(message: types.Message):
+    """Delete a specific announcement - ADMIN ONLY"""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Access Denied!")
+        return
+    
+    parts = message.text.split(maxsplit=1)
+    if len(parts) < 2:
+        await message.answer(
+            "📝 **Delete Announcement**\n\n"
+            "Type: `/delete_announcement [announcement text or ID]`\n\n"
+            "**Example:**\n"
+            "`/delete_announcement New video uploaded!`\n\n"
+            "Or use: `/list_announcements` to see all announcements.",
+            parse_mode="Markdown",
+            reply_markup=get_admin_menu()
+        )
+        return
+    
+    search_text = parts[1]
+    
+    # Try to find by ID first
+    if search_text in announcements:
+        del announcements[search_text]
+        save_data()
+        await message.answer(f"✅ Announcement `{search_text}` deleted!", reply_markup=get_admin_menu())
+        return
+    
+    # Otherwise search by text
+    found = None
+    for ann_id, ann_data in list(announcements.items()):
+        if search_text.lower() in ann_data['text'].lower():
+            found = ann_id
+            break
+    
+    if found:
+        del announcements[found]
+        save_data()
+        await message.answer(f"✅ Announcement deleted!", reply_markup=get_admin_menu())
+    else:
+        await message.answer(
+            f"❌ Announcement not found!\n\n"
+            f"Type `/list_announcements` to see all announcements.",
+            reply_markup=get_admin_menu()
+        )
+
+@dp.message(Command("list_announcements"))
+async def list_announcements_command(message: types.Message):
+    """List all announcements - ADMIN ONLY"""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Access Denied!")
+        return
+    
+    if not announcements:
+        await message.answer("📭 No announcements found.", reply_markup=get_admin_menu())
+        return
+    
+    text = "📢 **All Announcements**\n\n"
+    for ann_id, ann_data in list(announcements.items())[:20]:
+        text += f"📌 `{ann_id}`\n"
+        text += f"   📝 {ann_data['text'][:50]}{'...' if len(ann_data['text']) > 50 else ''}\n"
+        text += f"   📅 {ann_data['sent_at']}\n\n"
+    
+    text += "\nTo delete: `/delete_announcement [announcement_id]`"
+    await message.answer(text, parse_mode="Markdown", reply_markup=get_admin_menu())
+
+@dp.message(Command("deleteall_announcements"))
+async def delete_all_announcements_command(message: types.Message):
+    """Delete ALL announcements - ADMIN ONLY"""
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Access Denied!")
+        return
+    
+    if not announcements:
+        await message.answer("📭 No announcements to delete.", reply_markup=get_admin_menu())
+        return
+    
+    count = len(announcements)
+    announcements.clear()
+    save_data()
+    
+    await message.answer(f"🗑️ Deleted all {count} announcements!", reply_markup=get_admin_menu())
 
 # ============================================
 # ASK QUESTION
@@ -811,6 +973,7 @@ async def dashboard_command(message: types.Message):
 📊 Students: {len(users)}
 📹 Videos: {len(video_library)}
 ❓ Questions: {len(questions)}
+📢 Announcements: {len(announcements)}
 👀 Watched: {total_watched}
 📅 {datetime.now().strftime("%Y-%m-%d %H:%M")}
     """
@@ -862,7 +1025,6 @@ async def delete_all_videos(message: types.Message):
     save_data()
     
     await message.answer(f"🗑️ Deleted all {count} videos!")
-    print(f"🗑️ All {count} videos deleted")
 
 # ============================================
 # UPLOAD VIDEO
@@ -878,6 +1040,9 @@ async def upload_video_command(message: types.Message):
         await message.answer(
             "📹 **Upload a Video**\n\n"
             "**Format:** `/upload [key] [name]`\n\n"
+            "**For multi-part lessons:**\n"
+            "`/upload unit_1_1.1_1 Part 1`\n"
+            "`/upload unit_1_1.1_2 Part 2`\n\n"
             "**Example:**\n"
             "`/upload unit_1_1.1_1 Definition of Macroeconomics - Part 1`\n"
             "Then attach your video.",
@@ -924,70 +1089,30 @@ async def upload_video_command(message: types.Message):
 
 🎯 Students can now view this lesson!
     """, parse_mode="Markdown")
-    
-    print(f"📹 Uploaded: {video_key} - {lesson_name}")
 
 # ============================================
-# SEND MATERIAL
+# STUDENTS LIST
 # ============================================
 
-@dp.message(Command("material"))
-async def send_material_command(message: types.Message):
+@dp.message(Command("students"))
+async def view_students_command(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         await message.answer("⛔ Access Denied!")
         return
     
-    if not message.document:
-        await message.answer("📄 `/material [name]` then attach file.", parse_mode="Markdown")
+    if not users:
+        await message.answer("👥 No students yet.")
         return
     
-    document = message.document
-    file_id = document.file_id
-    file_name = document.file_name or "Unknown"
-    file_size = document.file_size
-    material_name = message.caption or "Untitled"
+    text = "👥 **Students**\n\n"
+    for i, (uid, data) in enumerate(users.items(), 1):
+        watched = progress.get(uid, {})
+        text += f"{i}. **{data['name']}**\n"
+        text += f"   🆔 `{uid}`\n"
+        text += f"   📚 {len(watched)} lessons\n"
+        text += f"   📅 {data['joined_at']}\n\n"
     
-    sent = 0
-    for user_id in users.keys():
-        try:
-            await bot.send_document(
-                chat_id=int(user_id),
-                document=file_id,
-                caption=f"📄 **{material_name}**\n📎 {file_name}\n📦 {file_size//1024}KB"
-            )
-            sent += 1
-            await asyncio.sleep(0.05)
-        except:
-            pass
-    
-    await message.answer(f"✅ Sent to {sent} students!")
-
-# ============================================
-# SEND TEXT
-# ============================================
-
-@dp.message(Command("text"))
-async def send_text_command(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        await message.answer("⛔ Access Denied!")
-        return
-    
-    parts = message.text.split(maxsplit=1)
-    if len(parts) < 2:
-        await message.answer("📢 `/text [message]`", parse_mode="Markdown")
-        return
-    
-    text_message = parts[1]
-    sent = 0
-    for user_id in users.keys():
-        try:
-            await bot.send_message(chat_id=int(user_id), text=f"📢 **Announcement**\n\n{text_message}", parse_mode="Markdown")
-            sent += 1
-            await asyncio.sleep(0.05)
-        except:
-            pass
-    
-    await message.answer(f"✅ Sent to {sent} students!")
+    await message.answer(text, parse_mode="Markdown", reply_markup=get_admin_menu())
 
 # ============================================
 # HELP, ABOUT, MYID
@@ -996,14 +1121,37 @@ async def send_text_command(message: types.Message):
 @dp.message(Command("help"))
 async def help_command(message: types.Message):
     if message.from_user.id == ADMIN_ID:
-        text = "👑 **Admin Commands**\n\n/upload - Upload video\n/material - Send material\n/text - Send text\n/questions - View questions\n/reply - Reply to question\n/delete - Delete content\n/deleteall - Delete all videos\n/dashboard - View stats"
+        text = """
+👑 **Admin Commands**
+
+📹 /upload - Upload video
+📢 /text - Send announcement
+❓ /questions - View questions
+💬 /reply - Reply to question
+🗑️ /delete - Delete content
+🗑️ /deleteall - Delete all videos
+🗑️ /delete_announcement - Delete announcement
+📋 /list_announcements - List announcements
+📊 /dashboard - View stats
+👥 /students - View students
+        """
     else:
-        text = "🤖 **Student Commands**\n\n/start - Start\n/units - View units\n/ask - Ask question\n/progress - View progress\n/myid - Your ID\n/about - About"
+        text = """
+🤖 **Student Commands**
+
+/start - Start the bot
+/units - View all units
+/ask - Ask a question
+/progress - View progress
+/myid - Show your ID
+/about - About Academy
+/help - This menu
+        """
     await message.answer(text, parse_mode="Markdown", reply_markup=get_student_menu() if message.from_user.id != ADMIN_ID else get_admin_menu())
 
 @dp.message(Command("about"))
 async def about_command(message: types.Message):
-    text = "🏛️ **Waloo Academy**\n\n📚 Grade 12 Economics\n📖 8 Units | 34 Lessons"
+    text = "🏛️ **Waloo Academy**\n\n📚 Grade 12 Economics\n📖 8 Units | 34 Lessons\n🎯 Making quality education accessible!"
     await message.answer(text, parse_mode="Markdown", reply_markup=get_student_menu() if message.from_user.id != ADMIN_ID else get_admin_menu())
 
 @dp.message(Command("myid"))
@@ -1030,24 +1178,28 @@ async def handle_other_messages(message: types.Message):
 # ============================================
 # START BOT
 # ============================================
+
 async def main():
-    """Start the bot"""
     print("=" * 60)
-    print("🚀 WALOO ACADEMY BOT - FULLY FIXED")
+    print("🚀 WALOO ACADEMY BOT - WITH DELETE FEATURES")
     print("=" * 60)
     print(f"📱 Bot online!")
     print(f"👑 Admin ID: {ADMIN_ID}")
-    print(f"📹 Videos uploaded: {len(video_library)}")
-    for key, data in video_library.items():
-        print(f"   ✅ {key} - {data['name']}")
+    print(f"👥 Students: {len(users)}")
+    print(f"📹 Videos: {len(video_library)}")
+    print(f"📢 Announcements: {len(announcements)}")
+    print(f"❓ Questions: {len(questions)}")
     print("=" * 60)
-    print("✅ ALL FIXED! Videos should play now!")
+    print("✅ Includes announcement delete features!")
     print("🛑 Press Ctrl+C to stop")
     print("=" * 60)
     
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
     try:
-        await dp.start_polling(bot, skip_updates=True)
-    except asyncio.CancelledError:
-        print("🛑 Bot stopped")
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n🛑 Bot stopped")
     except Exception as e:
         print(f"❌ Error: {e}")

@@ -1,0 +1,74 @@
+{
+  "videos": {
+    "unit_1_1.1_1": {
+      "name": "Definition of Macroeconomics - Part 1",
+      "file_id": "BAACAgQAAxkBAANUakD30WtkAbhOr_V4oR_l3jlqMdMAAkUkAALdZglSfPf4uweKJhE8BA",
+      "duration": 64,
+      "size": 7828450,
+      "uploaded_at": "2026-06-28 05:43"
+    },
+    "unit_1_1.1_2": {
+      "name": "Focus area of Macroeconomics - Part 2",
+      "file_id": "BAACAgQAAxkBAAMeakDsS44HS0GNjRBLYvFtZhFCdssAAj0kAALdZglSOATN85ugxvk8BA",
+      "duration": 29,
+      "size": 2903567,
+      "uploaded_at": "2026-06-28 05:44"
+    },
+    "unit_1_1.1_3": {
+      "name": "Importance of Macroeconomics - Part 3",
+      "file_id": "BAACAgQAAxkBAANXakD4ThgqNJeZ1x3I3U9t4CC-ncAAAkYkAALdZglSgqinf_q_8wABPAQ",
+      "duration": 24,
+      "size": 2183863,
+      "uploaded_at": "2026-06-28 05:45"
+    }
+  },
+  "questions": {
+    "q_1": {
+      "user_id": "6865678897",
+      "user_name": "Olinaaf \ud83d\uded0",
+      "question": "Maaliif video course nuuf hin gadhiifamne barsiisaa?",
+      "asked_at": "2026-06-28 04:03",
+      "answered": true,
+      "answer": "Obsaan nuu eegaa isiniif gadhiifna!",
+      "answered_at": "2026-06-28 04:29"
+    },
+    "q_2": {
+      "user_id": "6865678897",
+      "user_name": "Olinaaf \ud83d\uded0",
+      "username": "Olinaaftolaa",
+      "question": "Course video maaliif nuuf hin gadhiifamne barsiisaa?",
+      "asked_at": "2026-06-28 04:17",
+      "answered": false
+    }
+  },
+  "users": {
+    "6865678897": {
+      "name": "Olinaaf \ud83d\uded0",
+      "username": "Olinaaftolaa",
+      "joined_at": "2026-06-28 03:08",
+      "total_lessons_watched": 6
+    },
+    "6454146605": {
+      "name": "\ud835\udc08 \ud835\udc73\ud835\udc90\ud835\udc97\ud835\udc86\ud83c\udf39\u2764\ufe0f\u200d\ud83d\udd25\ud835\udc14",
+      "username": "Latusaid",
+      "joined_at": "2026-06-28 03:08",
+      "total_lessons_watched": 0
+    }
+  },
+  "progress": {
+    "6865678897": {
+      "unit_1_1.1": {
+        "watched_at": "2026-06-28 05:25"
+      },
+      "unit_1_1.1_1": {
+        "watched_at": "2026-06-28 05:45"
+      },
+      "unit_1_1.1_2": {
+        "watched_at": "2026-06-28 05:45"
+      },
+      "unit_1_1.1_3": {
+        "watched_at": "2026-06-28 05:46"
+      }
+    }
+  }
+}

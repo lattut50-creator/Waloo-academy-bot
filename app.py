@@ -1,8 +1,7 @@
-import asyncio
+ import asyncio
 import os
 from flask import Flask
 from threading import Thread
-import asyncio
 
 # Import your bot's main components
 from bot import dp, bot
@@ -37,5 +36,4 @@ if __name__ == "__main__":
     
     # Run the Flask server
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)ORT", 5000))
     app.run(host='0.0.0.0', port=port)

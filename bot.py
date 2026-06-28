@@ -1030,8 +1030,7 @@ async def handle_other_messages(message: types.Message):
 # ============================================
 # START BOT
 # ============================================
-
- async def main():
+async def main():
     """Start the bot"""
     print("=" * 60)
     print("🚀 WALOO ACADEMY BOT - FULLY FIXED")

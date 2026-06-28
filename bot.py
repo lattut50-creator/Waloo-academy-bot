@@ -1031,7 +1031,8 @@ async def handle_other_messages(message: types.Message):
 # START BOT
 # ============================================
 
-async def main():
+ async def main():
+    """Start the bot"""
     print("=" * 60)
     print("🚀 WALOO ACADEMY BOT - FULLY FIXED")
     print("=" * 60)
@@ -1045,12 +1046,9 @@ async def main():
     print("🛑 Press Ctrl+C to stop")
     print("=" * 60)
     
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
     try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\n🛑 Bot stopped")
+        await dp.start_polling(bot, skip_updates=True)
+    except asyncio.CancelledError:
+        print("🛑 Bot stopped")
     except Exception as e:
         print(f"❌ Error: {e}")

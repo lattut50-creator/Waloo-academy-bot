@@ -17,20 +17,21 @@ def home():
 def health():
     return "OK"
 
-def run_bot():
-    """Run the bot with proper error handling"""
+def run_web_server():
+    """Run Flask web server in a separate thread"""
+    port = int(os.environ.get("PORT", 5000))
+    print(f"🌐 Starting web server on port {port}...")
+    sys.stdout.flush()
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+
+async def run_bot():
+    """Run the bot in the main thread"""
     print("🚀 Starting bot...")
     sys.stdout.flush()
     try:
-        # Create new event loop for this thread
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
         print("📱 Bot polling started...")
         sys.stdout.flush()
-        # Start polling without signal handlers
-        loop.run_until_complete(dp.start_polling(bot, skip_updates=True))
-        loop.run_forever()
+        await dp.start_polling(bot, skip_updates=True)
     except Exception as e:
         print(f"❌ Bot error: {e}")
         sys.stdout.flush()
@@ -41,14 +42,11 @@ if __name__ == "__main__":
     print("=" * 50)
     sys.stdout.flush()
     
-    # Start the bot in a separate thread
-    bot_thread = Thread(target=run_bot, daemon=True)
-    bot_thread.start()
-    print("✅ Bot thread started")
+    # Start web server in a separate thread
+    web_thread = Thread(target=run_web_server, daemon=True)
+    web_thread.start()
+    print("✅ Web server thread started")
     sys.stdout.flush()
     
-    # Run the Flask server
-    port = int(os.environ.get("PORT", 5000))
-    print(f"🌐 Starting web server on port {port}...")
-    sys.stdout.flush()
-    app.run(host='0.0.0.0', port=port)
+    # Run bot in the main thread
+    asyncio.run(run_bot())
